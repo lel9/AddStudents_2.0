@@ -2,7 +2,8 @@ import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from lib.mconstants import LOGIN_PREFIX, EMAIL_TIMEOUT, PASSWORD_LENGTH, PASSWORD_NOT_CHANGED
+from lib.mconstants import LOGIN_PREFIX, EMAIL_TIMEOUT, PASSWORD_LENGTH, \
+    PASSWORD_NOT_CHANGED, SEARCH_USER_STEP
 from lib.helpers import random_pass, add_zero, exc_to_str
 
 
@@ -65,7 +66,7 @@ def send_one_mail(student, email_data):
 def get_last_used_id(redmine):
     offset = 0
     last_used_id = 0
-    step = 100
+    step = SEARCH_USER_STEP
     while True:
         users = redmine.user.all(offset=offset, limit=step)
         if len(users) == 0:
