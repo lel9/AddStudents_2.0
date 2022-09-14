@@ -1,7 +1,7 @@
 import argparse
 
 from src.lib.helpers import *
-from src.lib.logic import delete_user, change_passw_user
+from src.lib.logic import change_passw_user
 
 if __name__ == '__main__':
 
@@ -21,8 +21,6 @@ if __name__ == '__main__':
         print('Ошибка чтения настроечного файла settings.ini!')
         process_errors([error])
         exit()
-    else:
-        print('Настроечный файл успешно прочитан...')
 
     error = try_open(ns.fin)
     if error:

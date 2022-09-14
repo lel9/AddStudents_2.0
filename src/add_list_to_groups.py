@@ -19,8 +19,6 @@ if __name__ == '__main__':
         print('Ошибка чтения настроечного файла settings.ini!')
         process_errors([error])
         exit()
-    else:
-        print('Настроечный файл успешно прочитан...')
 
     error = try_open(ns.fin)
     if error:
