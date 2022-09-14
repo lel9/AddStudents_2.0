@@ -1,0 +1,2 @@
+LOGIN_PREFIX = 'stud_'
+EMAIL_TIMEOUT = 3

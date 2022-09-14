@@ -1,11 +1,33 @@
 import codecs
 import configparser
 import random
+import smtplib
 import string
-import traceback
+from getpass import getpass
 
 import gitlab
 from redminelib import Redmine
+
+
+def process_warnings(warnings):
+    for w in warnings:
+        print(w)
+
+
+def process_errors(errors):
+    for e in errors:
+        print(e)
+
+
+def print_student(snum, student):
+    print(snum + ' = { ', end='')
+    for k, v in student.items():
+        print(str(k) + ': ' + str(v), end=', ')
+    print(' }')
+
+
+def exc_to_str(e):
+    return str(type(e)) + ': ' + str(e)
 
 
 def random_pass(length):
@@ -24,7 +46,7 @@ def try_open(fpath):
         with open(fpath, 'r', encoding='UTF-8'):
             pass
     except Exception as e:
-        return e
+        return exc_to_str(e)
     return None
 
 
@@ -48,8 +70,15 @@ def read_config(path):
         if 'gitlab_token' not in config['Gitlab']:
             return 'Настройка gitlab_token не найдена', None
 
+        if 'Email' not in config:
+            return 'Настройки Email не найдены', None
+        if 'from' not in config['Email']:
+            return 'Настройка from не найдена', None
+        if 'host' not in config['Email']:
+            return 'Настройка host не найдена', None
+
     except Exception as e:
-        return e, None
+        return exc_to_str(e), None
     return None, config
 
 
@@ -58,11 +87,7 @@ def get_redmine(config):
         return None, Redmine(config['Redmine']['redmine_host'],
                           key = config['Redmine']['redmine_key'])
     except Exception as e:
-        return e, None
-
-
-def exc_to_str(e):
-    return str(type(e)) + str(e.args) + ': ' + str(e)
+        return exc_to_str(e), None
 
 
 def get_gitlab(config):
@@ -75,5 +100,42 @@ def get_gitlab(config):
         # to validate your token authentication. Note that this will not work with job tokens.
         gl.auth()
     except Exception as e:
-        return e, None
+        return exc_to_str(e), None
     return None, gl
+
+
+def get_email_data(config, fmail_template):
+    warnings = []
+    error = try_open(fmail_template)
+    if error:
+        return error, warnings, None
+
+    email_data = dict()
+    with open(fmail_template, 'r', encoding="UTF-8") as f:
+        email_data['subject'] = f.readline().strip()
+        if len(email_data['subject']) == 0:
+            warnings.append('Не указана тема отправляемого письма')
+
+        text = f.readlines()
+        i = 0
+        while i < len(text) and len(text[i].strip()) == 0:
+            i += 1
+        if i == len(text):
+            error = 'Не указан текст отправляемого письма'
+            return error, warnings, None
+
+        email_data['template'] = ''.join(text[i:])
+        email_data['from'] = config['Email']['from']
+
+        try:
+            server = smtplib.SMTP(config['Email']['host'])
+            passw = getpass("Введите пароль от п/я " + email_data['from'] + ': ')
+            server.login(email_data['from'], passw)
+            email_data['smtp_server'] = server
+        except Exception as e:
+            return exc_to_str(e), warnings, None
+    return None, warnings, email_data
+
+
+def quit_server(email_data):
+    email_data['smtp_server'].quit()
