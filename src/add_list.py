@@ -1,24 +1,25 @@
 import argparse
 
-from src.lib.helpers import *
-from src.lib.logic import one_gre_transaction, add_one_to_groups
-from src.lib.minput import parse_header, read_student
+from lib.helpers import *
+from lib.logic import one_gre_transaction, add_one_to_groups
+from lib.minput import parse_header, read_student
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Параметры запуска:')
-    parser.add_argument('-i', '--fin', type=str, default='../students.csv',
-                        help='Полный путь к входному файлу со студентами (по-умолчанию ../students.csv)')
+    parser.add_argument('-i', '--fin', type=str, default='./students.csv',
+                        help='Полный путь к входному файлу со студентами (по-умолчанию ./students.csv)')
     parser.add_argument('-m', '--fmail_template', type=str, default='../email1.txt',
-                        help='Полный путь к файлу с шаблоном и темой письма (по-умолчанию ../email1.txt)')
-
+                        help='Полный путь к файлу с шаблоном и темой письма (по-умолчанию ./email1.txt)')
+    parser.add_argument('-s', '--fsettings', type=str, default='./settings.ini',
+                        help='Полный путь к файлу с настройками (по-умолчанию ./settings.ini)')
 
     ns = parser.parse_args()
     print(ns)
 
     # читаем конфиги
-    error, config = read_config('../settings.ini')
+    error, config = read_config(ns.fsettings)
     if error:
         print('Ошибка чтения настроечного файла settings.ini!')
         process_errors([error])

@@ -2,8 +2,8 @@ import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from src.lib.constants import LOGIN_PREFIX, EMAIL_TIMEOUT, PASSWORD_LENGTH, PASSWORD_NOT_CHANGED
-from src.lib.helpers import random_pass, add_zero, exc_to_str
+from lib.mconstants import LOGIN_PREFIX, EMAIL_TIMEOUT, PASSWORD_LENGTH, PASSWORD_NOT_CHANGED
+from lib.helpers import random_pass, add_zero, exc_to_str
 
 
 def delete_one_from_redmine(student, redmine):
@@ -17,7 +17,7 @@ def delete_one_from_gitlab(student, gitlab):
 def add_one_to_redmine(student, redmine):
     user = redmine.user.create(
         login=student['stud_id'],
-        password=student['passw'],
+        password=student['rm_pass'],
         firstname=student['fname'],
         lastname=student['lname'],
         mail=student['email'],
@@ -28,7 +28,7 @@ def add_one_to_redmine(student, redmine):
 
 def add_one_to_gitlab(student, gitlab):
     user = gitlab.users.create({'email': student['email'],
-                                'password': student['passw'],
+                                'password': student['gl_pass'],
                                 'username': student['stud_id'],
                                 'name': student['lname'] + ' ' + student['fname'],
                                 'external': True,
@@ -53,12 +53,12 @@ def send_one_mail(student, email_data):
     msg['To'] = student['email']
     msg['Subject'] = email_data['subject']
     text = create_mail(student, email_data['template'])
-    #print('Щас как отправим письмо для ' + student['email'] + ' от ' +
-    #      email_data['from'] + ' с темой ' + email_data['subject'])
-    #print(text)
+    print('Щас как отправим письмо для ' + student['email'] + ' от ' +
+          email_data['from'] + ' с темой ' + email_data['subject'])
+    print(text)
     msg.attach(MIMEText(text, 'plain'))
     msg = msg.as_string()
-    email_data['smtp_server'].sendmail(email_data['from'], [student['email']], msg)
+    #email_data['smtp_server'].sendmail(email_data['from'], [student['email']], msg)
     time.sleep(EMAIL_TIMEOUT)
 
 

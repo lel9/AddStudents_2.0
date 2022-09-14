@@ -84,3 +84,13 @@ def read_student(line, header_data):
         'email': email, 'eu_id': str(eu_id),
         'groups': groups
     }
+
+
+def read_student_cmd(ns):
+    fname, lname = get_fname_and_lname(ns.name)
+    errors, warnings, groups = get_groups(ns.groups)
+    return errors, warnings, {
+        'fname': fname, 'lname': lname,
+        'email': ns.email, 'eu_id': str(ns.eu_id),
+        'groups': groups
+    }

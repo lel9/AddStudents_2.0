@@ -1,19 +1,21 @@
 import argparse
 
-from src.lib.helpers import *
-from src.lib.logic import delete_user
+from lib.helpers import *
+from lib.logic import delete_user
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Параметры запуска:')
-    parser.add_argument('-i', '--fin', type=str, default='../logins.txt',
-                        help='Полный путь к входному файлу с логинами (по-умолчанию ../logins.txt)')
+    parser.add_argument('-i', '--fin', type=str, default='./logins.txt',
+                        help='Полный путь к входному файлу с логинами (по-умолчанию ./logins.txt)')
+    parser.add_argument('-s', '--fsettings', type=str, default='./settings.ini',
+                        help='Полный путь к файлу с настройками (по-умолчанию ./settings.ini)')
 
     ns = parser.parse_args()
     print(ns)
 
     # читаем конфиги
-    error, config = read_config('../settings.ini')
+    error, config = read_config(ns.fsettings)
     if error:
         print('Ошибка чтения настроечного файла settings.ini!')
         process_errors([error])
