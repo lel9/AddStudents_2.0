@@ -53,12 +53,12 @@ def send_one_mail(student, email_data):
     msg['To'] = student['email']
     msg['Subject'] = email_data['subject']
     text = create_mail(student, email_data['template'])
-    print('Щас как отправим письмо для ' + student['email'] + ' от ' +
-          email_data['from'] + ' с темой ' + email_data['subject'])
-    print(text)
+    #print('Щас как отправим письмо для ' + student['email'] + ' от ' +
+    #      email_data['from'] + ' с темой ' + email_data['subject'])
+    #print(text)
     msg.attach(MIMEText(text, 'plain'))
     msg = msg.as_string()
-    #email_data['smtp_server'].sendmail(email_data['from'], [student['email']], msg)
+    email_data['smtp_server'].sendmail(email_data['from'], [student['email']], msg)
     time.sleep(EMAIL_TIMEOUT)
 
 
