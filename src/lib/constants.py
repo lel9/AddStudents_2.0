@@ -1,2 +1,4 @@
 LOGIN_PREFIX = 'stud_'
+PASSWORD_LENGTH = 8
+PASSWORD_NOT_CHANGED = 'ПАРОЛЬ НЕ ИЗМЕНЁН'
 EMAIL_TIMEOUT = 3

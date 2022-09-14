@@ -2,7 +2,7 @@ import time
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from src.lib.constants import LOGIN_PREFIX, EMAIL_TIMEOUT
+from src.lib.constants import LOGIN_PREFIX, EMAIL_TIMEOUT, PASSWORD_LENGTH, PASSWORD_NOT_CHANGED
 from src.lib.helpers import random_pass, add_zero, exc_to_str
 
 
@@ -38,13 +38,13 @@ def add_one_to_gitlab(student, gitlab):
 
 def create_mail(student, email_template):
     return email_template.replace("%rm_login%", student['stud_id']) \
-        .replace("%rm_pass%", student['passw']) \
+        .replace("%rm_pass%", student['rm_pass']) \
         .replace("%gl_login%", student['stud_id']) \
-        .replace("%gl_pass%", student['passw']) \
+        .replace("%gl_pass%", student['gl_pass']) \
         .replace("%name%",
                  student['lname'] + ' ' + student['fname']
-                 if student['fname'] != '-' else
-                 student['lname'])
+                 if student['fname'] != '-'
+                 else student['lname'])
 
 
 def send_one_mail(student, email_data):
@@ -95,26 +95,27 @@ def one_gre_transaction(student, redmine, gitlab, email_data):
     rm_success, gl_success = 0, 0
     try:
         student['stud_id'] = get_next_stud_id(redmine)
-        student['passw'] = random_pass(8)
+        student['rm_pass'] = random_pass(PASSWORD_LENGTH)
+        student['gl_pass'] = student['rm_pass']
         add_one_to_redmine(student, redmine)
         rm_success = 1
         add_one_to_gitlab(student, gitlab)
         gl_success = 1
         send_one_mail(student, email_data)
-    except Exception as e:
+    except Exception as em:
         if rm_success:
             try:
                 delete_one_from_redmine(student, redmine)
-            except Exception as e:
+            except Exception as es:
                 print('Не удалось откатить транзакцию! Ошибка удаления из Redmine студента ' + student)
-                print(exc_to_str(e))
+                print(exc_to_str(es))
         if gl_success:
             try:
                 delete_one_from_gitlab(student, gitlab)
-            except Exception as e:
-                print('Не удалось откатить транзакцию! Ошибка удаления из Redmine студента ' + student)
-                print(exc_to_str(e))
-        return exc_to_str(e)
+            except Exception as es:
+                print('Не удалось откатить транзакцию! Ошибка удаления из Gitab студента ' + student)
+                print(exc_to_str(es))
+        return exc_to_str(em)
     return None
 
 
@@ -156,27 +157,27 @@ def add_one_to_groups(student, redmine):
     return errors
 
 
-def get_redmine_user_id(login, redmine):
+def get_redmine_user(login, redmine):
     users = redmine.user.filter(name=login)
     # filter очень хитер
     # например для name=stud_0 он вернет пользователей с логинами stud_00, stud_01, stud_02 и т д
     # поэтому мы ходим по юзерам и точно выбираем нужного
     for user in users:
         if user.login == login:
-            return user.id
+            return user
     raise Exception("Студент с логином " + login + " не найден в Redmine")
 
 
-def get_gitlab_user_id(login, gitlab):
+def get_gitlab_user(login, gitlab):
     users = gitlab.users.list(username=login)
     if len(users) > 0:
-        return users[0].id
+        return users[0]
     raise Exception("Студент с логином " + login + " не найден в Gitlab")
 
 
 def add_one_to_groups_by_login(login, group, redmine):
     try:
-        redmine_id = get_redmine_user_id(login, redmine)
+        redmine_id = get_redmine_user(login, redmine).id
     except Exception as e:
         return exc_to_str(e)
 
@@ -193,7 +194,7 @@ def add_one_to_groups_by_login(login, group, redmine):
 def delete_user(login, redmine, gitlab):
     errors = []
     try:
-        redmine_id = get_redmine_user_id(login, redmine)
+        redmine_id = get_redmine_user(login, redmine).id
         student = dict()
         student['redmine_id'] = redmine_id
         delete_one_from_redmine(student, redmine)
@@ -201,11 +202,64 @@ def delete_user(login, redmine, gitlab):
         errors.append(exc_to_str(e))
 
     try:
-        gitlab_id = get_gitlab_user_id(login, gitlab)
+        gitlab_id = get_gitlab_user(login, gitlab).id
         student = dict()
         student['gitlab_id'] = gitlab_id
         delete_one_from_gitlab(student, gitlab)
     except Exception as e:
         errors.append(exc_to_str(e))
+
+    return errors
+
+
+def change_passw_redmine(redmine_user, new_pass):
+    redmine_user.password = new_pass
+    redmine_user.must_change_passwd = True
+    redmine_user.save()
+
+
+def change_passw_gilab(gitlab_user, new_pass):
+    gitlab_user.password = new_pass
+    gitlab_user.save()
+
+
+def change_passw_user(login, redmine, gitlab, email_data):
+    errors = []
+    student = {'stud_id': login,
+               'rm_pass': PASSWORD_NOT_CHANGED,
+               'gl_pass': PASSWORD_NOT_CHANGED}
+    new_pass = random_pass(PASSWORD_LENGTH)
+    rm_success = 0
+    gl_success = 0
+
+    try:
+        redmine_user = get_redmine_user(login, redmine)
+        student['fname'] = redmine_user.firstname
+        student['lname'] = redmine_user.lastname
+        student['email'] = redmine_user.mail
+        student['redmine_id'] = redmine_user.id
+        change_passw_redmine(redmine_user, new_pass)
+        student['rm_pass'] = new_pass
+        rm_success = 1
+    except Exception as e:
+        errors.append(exc_to_str(e))
+
+    try:
+        gitlab_user = get_gitlab_user(login, gitlab)
+        if not rm_success: # если не знаем ФИО и почту
+            student['lname'] = gitlab_user.name
+            student['fname'] = '-'
+            student['email'] = gitlab_user.email
+        change_passw_gilab(gitlab_user, new_pass)
+        student['gl_pass'] = new_pass
+        gl_success = 1
+    except Exception as e:
+        errors.append(exc_to_str(e))
+
+    if rm_success or gl_success:
+        try:
+            send_one_mail(student, email_data)
+        except Exception as e:
+            errors.append(exc_to_str(e))
 
     return errors
