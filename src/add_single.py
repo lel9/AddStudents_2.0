@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # читаем конфиги
     error, config = read_config(ns.fsettings)
     if error:
-        print('Ошибка чтения настроечного файла settings.ini!')
+        print('Ошибка чтения настроечного файла settings.ini:')
         process_errors([error])
         exit()
 
